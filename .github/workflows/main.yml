@@ -1,4 +1,4 @@
-name: Build APK from ZIP
+name: Build APK from ZIP (FIXED)
 
 on:
   workflow_dispatch:
@@ -18,15 +18,15 @@ jobs:
           sudo apt update
           sudo apt install -y wget unzip
 
-      - name: Download source zip
+      - name: Download ZIP
         run: |
           wget -O source.zip https://github.com/ducminh11102012/build-apk/releases/download/1/pureread-lite.zip
-          unzip source.zip -d src
 
-      - name: Detect project folder
+      - name: Unzip project
         run: |
-          ls src
-          echo "DONE LISTING"
+          unzip source.zip -d src
+          echo "=== TREE ==="
+          ls -R src
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -34,13 +34,28 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Make gradlew executable
+      - name: Find Gradle wrapper
         run: |
-          find src -name gradlew -exec chmod +x {} \;
+          GRADLEW_PATH=$(find src -name gradlew | head -n 1)
 
-      - name: Build Debug APK
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "ERROR: gradlew not found!"
+            exit 1
+          fi
+
+          echo "Found gradlew: $GRADLEW_PATH"
+
+          chmod +x "$GRADLEW_PATH"
+          echo "$GRADLEW_PATH" > gradle_path.txt
+
+      - name: Build APK
         run: |
-          cd $(find src -name gradlew | head -n 1 | xargs dirname)
+          GRADLEW_PATH=$(cat gradle_path.txt)
+          DIR=$(dirname "$GRADLEW_PATH")
+
+          echo "Building in: $DIR"
+
+          cd "$DIR"
           ./gradlew assembleDebug
 
       - name: Upload APK
