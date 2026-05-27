@@ -1,4 +1,4 @@
-name: Build APK from ZIP (FIXED)
+name: Build APK (No Gradle Wrapper)
 
 on:
   workflow_dispatch:
@@ -16,47 +16,38 @@ jobs:
       - name: Install tools
         run: |
           sudo apt update
-          sudo apt install -y wget unzip
+          sudo apt install -y wget unzip gradle
 
       - name: Download ZIP
         run: |
           wget -O source.zip https://github.com/ducminh11102012/build-apk/releases/download/1/pureread-lite.zip
 
-      - name: Unzip project
+      - name: Unzip
         run: |
           unzip source.zip -d src
-          echo "=== TREE ==="
           ls -R src
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Find Gradle wrapper
+      - name: Find project root
         run: |
-          GRADLEW_PATH=$(find src -name gradlew | head -n 1)
+          echo "Searching for Android project..."
+          PROJECT_DIR=$(find src -name "build.gradle*" -exec dirname {} \; | head -n 1)
 
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "ERROR: gradlew not found!"
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: No build.gradle found!"
             exit 1
           fi
 
-          echo "Found gradlew: $GRADLEW_PATH"
+          echo "Project dir: $PROJECT_DIR"
+          echo $PROJECT_DIR > project_dir.txt
 
-          chmod +x "$GRADLEW_PATH"
-          echo "$GRADLEW_PATH" > gradle_path.txt
-
-      - name: Build APK
+      - name: Build Debug APK (system gradle)
         run: |
-          GRADLEW_PATH=$(cat gradle_path.txt)
-          DIR=$(dirname "$GRADLEW_PATH")
+          PROJECT_DIR=$(cat project_dir.txt)
+          cd "$PROJECT_DIR"
 
-          echo "Building in: $DIR"
+          echo "Building in $PROJECT_DIR"
 
-          cd "$DIR"
-          ./gradlew assembleDebug
+          gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
