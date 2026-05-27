@@ -1,4 +1,4 @@
-name: Build APK (No Gradle Wrapper)
+name: Build APK (Correct App Module)
 
 on:
   workflow_dispatch:
@@ -27,25 +27,24 @@ jobs:
           unzip source.zip -d src
           ls -R src
 
-      - name: Find project root
+      - name: Find app module
         run: |
-          echo "Searching for Android project..."
-          PROJECT_DIR=$(find src -name "build.gradle*" -exec dirname {} \; | head -n 1)
+          APP_DIR=$(find src -path "*/app/build.gradle.kts" -exec dirname {} \; | head -n 1)
 
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: No build.gradle found!"
+          if [ -z "$APP_DIR" ]; then
+            echo "ERROR: app module not found!"
             exit 1
           fi
 
-          echo "Project dir: $PROJECT_DIR"
-          echo $PROJECT_DIR > project_dir.txt
+          echo "APP_DIR=$APP_DIR" > env.txt
+          echo "Found app module: $APP_DIR"
 
-      - name: Build Debug APK (system gradle)
+      - name: Build APK
         run: |
-          PROJECT_DIR=$(cat project_dir.txt)
-          cd "$PROJECT_DIR"
+          source env.txt
+          cd "$APP_DIR"
 
-          echo "Building in $PROJECT_DIR"
+          echo "Building in: $APP_DIR"
 
           gradle assembleDebug --no-daemon
 
@@ -54,4 +53,4 @@ jobs:
         with:
           name: app-debug-apk
           path: |
-            src/**/build/outputs/apk/debug/*.apk
+            src/**/app/build/outputs/apk/debug/*.apk
