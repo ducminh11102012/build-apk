@@ -1,0 +1,51 @@
+name: Build APK from ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt update
+          sudo apt install -y wget unzip
+
+      - name: Download source zip
+        run: |
+          wget -O source.zip https://github.com/ducminh11102012/build-apk/releases/download/1/pureread-lite.zip
+          unzip source.zip -d src
+
+      - name: Detect project folder
+        run: |
+          ls src
+          echo "DONE LISTING"
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Make gradlew executable
+        run: |
+          find src -name gradlew -exec chmod +x {} \;
+
+      - name: Build Debug APK
+        run: |
+          cd $(find src -name gradlew | head -n 1 | xargs dirname)
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: |
+            src/**/build/outputs/apk/debug/*.apk
